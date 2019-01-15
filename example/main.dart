@@ -10,7 +10,7 @@ void main(List<String> args) async {
 
   final negator = sentiment.ENNegator.create();
 
-  final analyzer = sentiment.SentimentAnalyzer(await deserializer.parse(), tokenizer, negator, 
+  final analyzer = sentiment.SentimentAnalyzer(await deserializer.parse()..append(sentiment.Lemma('good shit', 5, sentiment.LemmaType.CONPULATIVE)), tokenizer, negator, 
     incrementingAdverbs: Set.of([
       'absolutely',
       'amazingly',
@@ -21,7 +21,6 @@ void main(List<String> args) async {
       'fucking',
       'greatly',
       'incredibly',
-      'quite',
       'really',
       'remarkably',
       'tremendously',
@@ -37,15 +36,18 @@ void main(List<String> args) async {
       'kinda',
       'kindof',
       'partly',
+      'pretty',
+      'quite',
       'somewhat',
       'some what',
       'sort of',
       'sorta',
-      'sortof'
+      'sortof',
+      'slightly'
     ])
   );
 
-  final score = analyzer.analyze('absolutely shit');
+  final score = analyzer.analyze('fucking love');
 
   if (score != null)
     print(

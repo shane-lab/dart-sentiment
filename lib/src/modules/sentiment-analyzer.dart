@@ -46,6 +46,13 @@ class SentimentAnalyzer {
     this._decrementingAdverbs = decrementingAdverbs;
   }
 
+  int get _maxAdverbs {
+    int a = _incrementingAdverbs?.reduce((a, b) => a.length > b.length ? a : b)?.split(' ')?.length ?? 0;
+    int b = _decrementingAdverbs?.reduce((a, b) => a.length > b.length ? a : b)?.split(' ')?.length ?? 0;
+
+    return a > b ? a : b;
+  }
+
   Score analyze(final String input) {
     // individual words of the given input
     final words = _tokenizer.tokenize(input);
@@ -74,6 +81,8 @@ class SentimentAnalyzer {
               continue;
             }
           }
+
+          print('found: ${conpulative}');
         }
 
         skipped = 0;
@@ -97,8 +106,8 @@ class SentimentAnalyzer {
       }
 
       final lemma = _lexicon[word];
-      if (lemma != null && _checkAdverbType(word) == _ADVERB_TYPE.NONE)
-        scores.add(_validity(lemma, words, i));
+      if (lemma != null && !_lookAhead(word, words, i))
+        scores.add(_validity(lemma, words, word.contains(RegExp(r'\s+')) ? i - (word.split(' ').length - 1) : i));
     }
 
     // scores = 
@@ -109,13 +118,49 @@ class SentimentAnalyzer {
   _ADVERB_TYPE _checkAdverbType(final String word) {
     if (word == null)
       return _ADVERB_TYPE.NONE;
-    
+
     if(_incrementingAdverbs != null && _incrementingAdverbs.contains(word))
       return _ADVERB_TYPE.INCREMENTAL;
     else if(_decrementingAdverbs != null && _decrementingAdverbs.contains(word))
       return _ADVERB_TYPE.DECREMENTAL;
 
     return _ADVERB_TYPE.NONE;
+  }
+
+  /// checks if the next word is another registered adverb to increment or decrement, returns true when the word is an adverb or registered as part of the lexicon
+  bool _lookAhead(final String word, final List<String> words, int index) {
+    if (words.length - 1 > index) {
+      var nextWord = words[index + 1];
+      if (_checkAdverbType(word) != _ADVERB_TYPE.NONE) {
+        bool isAdverb = _checkAdverbType(nextWord) != _ADVERB_TYPE.NONE;
+        if (!isAdverb)
+          return _lexicon.find(nextWord) != null;
+
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  List<bool> _isAdverb(final String word) {
+    final set = Set<String>.of([_decrementingAdverbs ?? [],_incrementingAdverbs ?? []].expand((x) => x));
+
+    bool isPartial = false;
+    bool flag = set.where((adverb) {
+      // check if last word is (part of) the adverb
+      final splitted = adverb.split(' ');
+      if (splitted[splitted.length - 1] == word) {
+        if (splitted.length > 1) 
+          isPartial = true;
+        
+        return true;
+      }
+
+      return adverb == word;
+    }).length > 0;
+
+    return [flag, isPartial];
   }
 
   /// checks and returns the score of word
@@ -125,26 +170,81 @@ class SentimentAnalyzer {
 
     var score = lemma.score;
 
-    var precedingWords = [];
-    // check preceding words (up to two) to either increase, decrease, or nullify the score of the lemma when negated
-    for (var i = 0; i < 2; i++) {
-      var precedingWord = index > i ? words[index - (i + 1)] : null;
-      if (precedingWord != null) {
-        score += _amplifyLemmaScore([[precedingWord], precedingWords].expand((w) => w).join(' '), score);
-
-        precedingWords.add(precedingWord);
+    // check for possible preceding adverbs
+    int i = 0;
+    bool flag0 = index > i;
+    do {
+      final j = index - (i + 1);
+      if (j < 0) {
+        flag0 = false;
+        continue;
       }
-    }
+      var precedingWord = words[j];
+
+      var adverbCheck = _isAdverb(precedingWord);
+      var isAdverb = adverbCheck[0];
+      var isPartial = adverbCheck[1];
+
+      // word is not an adverb, break 
+      if (!isAdverb) {
+        flag0 = false;
+        continue;
+      }
+
+      // fetch full adverb of a partial adverb
+      final precedingWords = [precedingWord];
+      if (isPartial) {
+        final k = j - 1;
+        if (k < 0) {
+          flag0 = false;
+          continue;
+        }
+        bool flag1 = true;
+
+        int n = 0;
+        do {
+          if (k - (n + 1) < 0) {
+            flag1 = false;
+            continue;
+          }
+
+          precedingWord = words[k - n];
+          final conpulative = [[precedingWord], precedingWords].expand((x) => x).join(' ');
+          
+          adverbCheck = _isAdverb(conpulative);
+          isAdverb = adverbCheck[0];
+          isPartial = adverbCheck[1];
+
+          if (!isAdverb || (isAdverb && !isPartial)) {
+            if (isAdverb && !isPartial) 
+              precedingWord = conpulative;
+
+            flag1 = false;
+            continue;
+          }
+
+          precedingWords.add(precedingWord);
+          n++;
+        } while (flag1);
+      } 
+
+      score += _amplifyLemmaScore(precedingWord, score); // * (1 - (.05 * i));
+
+      i++;
+    } while (flag0);
 
     return score;
   }
 
   /// increases or decreases the lemma based on the given adverb
-  num _amplifyLemmaScore(final String word, num score) {
+  num _amplifyLemmaScore(final String word, num score, [String conpulative]) {
     num amp = 0.0;
 
-    final type = _checkAdverbType(word);
+    // print('conpulative: ${conpulative}');
+
+    _ADVERB_TYPE type = _checkAdverbType(word);
     if (type != _ADVERB_TYPE.NONE) {
+      print('adverb: ${word}, type: ${type}');
       amp = type == _ADVERB_TYPE.INCREMENTAL ? _INCREMENT : _DECREMENT;
       if (score < 0)
         amp *= -1;
