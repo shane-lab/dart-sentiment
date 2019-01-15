@@ -52,10 +52,10 @@ void main(List<String> args) async {
   if (score != null)
     print(
 '''
-neu: ${score.indifferent}
-neg: ${score.negative}
-pos: ${score.positive}
-comparative: ${score.value}
+neu: ${score.indifferent.toStringAsFixed(4)}
+neg: ${score.negative.toStringAsFixed(4)}
+pos: ${score.positive.toStringAsFixed(4)}
+comparative: ${score.value.toStringAsFixed(4)}
 '''
     );
 }

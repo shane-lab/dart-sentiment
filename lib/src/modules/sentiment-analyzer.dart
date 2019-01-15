@@ -42,20 +42,20 @@ class SentimentAnalyzer {
   Set<String> _decrementingAdverbs;
 
   SentimentAnalyzer(this._lexicon, this._tokenizer, this._negator, {Set<String> incrementingAdverbs, Set<String> decrementingAdverbs}) {
-    this._incrementingAdverbs = incrementingAdverbs;
-    this._decrementingAdverbs = decrementingAdverbs;
+    this._incrementingAdverbs = List<String>.unmodifiable(incrementingAdverbs).toSet();
+    this._decrementingAdverbs = List<String>.unmodifiable(decrementingAdverbs).toSet();
   }
 
   int get _maxAdverbs {
-    int a = _incrementingAdverbs?.reduce((a, b) => a.length > b.length ? a : b)?.split(' ')?.length ?? 0;
-    int b = _decrementingAdverbs?.reduce((a, b) => a.length > b.length ? a : b)?.split(' ')?.length ?? 0;
+    int _a = _incrementingAdverbs?.reduce((a, b) => a.split(' ').length > b.split(' ').length ? a : b)?.split(' ')?.length ?? 0;
+    int _b = _decrementingAdverbs?.reduce((a, b) => a.split(' ').length > b.split(' ').length ? a : b)?.split(' ')?.length ?? 0;
 
-    return a > b ? a : b;
+    return _a > _b ? _a : _b;
   }
 
   Score analyze(final String input) {
     // individual words of the given input
-    final words = _tokenizer.tokenize(input);
+    final words = _tokenizer.tokenize(input).map((s) => s.toLowerCase()).toList();
 
     // tallied score of input
     final scores = List<num>();
@@ -68,7 +68,7 @@ class SentimentAnalyzer {
 
     var remainingInput = input.trim().toLowerCase();
     for (var i = 0; i < words.length; i++) {
-      var word = words[i].toLowerCase();
+      var word = words[i];
       
       // check for a copulative of the current word
       if (conpulative == null) {
@@ -82,7 +82,8 @@ class SentimentAnalyzer {
             }
           }
 
-          print('found: ${conpulative}');
+          if (conpulative != null)
+            print('found conpulative lemma: \'${conpulative}\'');
         }
 
         skipped = 0;
@@ -108,11 +109,13 @@ class SentimentAnalyzer {
       final lemma = _lexicon[word];
       if (lemma != null && !_lookAhead(word, words, i))
         scores.add(_validity(lemma, words, word.contains(RegExp(r'\s+')) ? i - (word.split(' ').length - 1) : i));
+      else
+        scores.add(0);
     }
 
     // scores = 
 
-    return _calc(scores, words.length);
+    return _tally(scores);
   }
   
   _ADVERB_TYPE _checkAdverbType(final String word) {
@@ -129,12 +132,14 @@ class SentimentAnalyzer {
 
   /// checks if the next word is another registered adverb to increment or decrement, returns true when the word is an adverb or registered as part of the lexicon
   bool _lookAhead(final String word, final List<String> words, int index) {
-    if (words.length - 1 > index) {
+    if (word != null && words != null && words.length - 1 > index) {
       var nextWord = words[index + 1];
       if (_checkAdverbType(word) != _ADVERB_TYPE.NONE) {
+        // print(words[])
         bool isAdverb = _checkAdverbType(nextWord) != _ADVERB_TYPE.NONE;
-        if (!isAdverb)
+        if (!isAdverb) {
           return _lexicon.find(nextWord) != null;
+        }
 
         return true;
       }
@@ -143,8 +148,21 @@ class SentimentAnalyzer {
     return false;
   }
 
+  /// checks if the given word is (part of) an adverb
   List<bool> _isAdverb(final String word) {
-    final set = Set<String>.of([_decrementingAdverbs ?? [],_incrementingAdverbs ?? []].expand((x) => x));
+    if (word == null)
+      return [false, false];
+
+    final merger = List<Iterable<String>>();
+    if (_incrementingAdverbs != null)
+      merger.add(_incrementingAdverbs);
+    if (_decrementingAdverbs != null)
+      merger.add(_decrementingAdverbs);
+
+    final set = Set<String>.of(merger.expand((x) => x));
+
+    if (set.length == 0)
+      return [false, false];
 
     bool isPartial = false;
     bool flag = set.where((adverb) {
@@ -188,32 +206,41 @@ class SentimentAnalyzer {
       // word is not an adverb, break 
       if (!isAdverb) {
         flag0 = false;
-        continue;
+        break;
       }
 
-      // fetch full adverb of a partial adverb
-      final precedingWords = [precedingWord];
+      // fetch full the adverb of the returned partial adverb
       if (isPartial) {
         final k = j - 1;
         if (k < 0) {
           flag0 = false;
           continue;
         }
+        
+        // store preceding words of the partial adverb untill an adverb is formed
+        final precedingWords = [precedingWord];
+
         bool flag1 = true;
 
         int n = 0;
         do {
-          if (k - (n + 1) < 0) {
+          if ((k - n) < 0) {
             flag1 = false;
             continue;
           }
 
           precedingWord = words[k - n];
           final conpulative = [[precedingWord], precedingWords].expand((x) => x).join(' ');
-          
+
           adverbCheck = _isAdverb(conpulative);
           isAdverb = adverbCheck[0];
           isPartial = adverbCheck[1];
+
+          if (!isAdverb && !isPartial) {
+            flag0 = false;
+            precedingWord = null;
+            break;
+          }
 
           if (!isAdverb || (isAdverb && !isPartial)) {
             if (isAdverb && !isPartial) 
@@ -228,7 +255,7 @@ class SentimentAnalyzer {
         } while (flag1);
       } 
 
-      score += _amplifyLemmaScore(precedingWord, score); // * (1 - (.05 * i));
+      score += (_amplifyLemmaScore(precedingWord, score) * (1 - (.05 * i)));
 
       i++;
     } while (flag0);
@@ -240,11 +267,9 @@ class SentimentAnalyzer {
   num _amplifyLemmaScore(final String word, num score, [String conpulative]) {
     num amp = 0.0;
 
-    // print('conpulative: ${conpulative}');
-
     _ADVERB_TYPE type = _checkAdverbType(word);
     if (type != _ADVERB_TYPE.NONE) {
-      print('adverb: ${word}, type: ${type}');
+      print('adverb: \'${word}\', type: ${type}');
       amp = type == _ADVERB_TYPE.INCREMENTAL ? _INCREMENT : _DECREMENT;
       if (score < 0)
         amp *= -1;
@@ -259,7 +284,7 @@ class SentimentAnalyzer {
 
   // peculiarities
 
-  Score _calc(Iterable<num> scores, int wordCount) {
+  Score _tally(Iterable<num> scores) {
     num indifferent = 0;
     num negative = 0;
     num positive = 0;
@@ -275,13 +300,20 @@ class SentimentAnalyzer {
       tallied += score;
     }
 
-    var normalized = tallied != 0 ? tallied / math.sqrt(tallied * tallied + /*wordCount*/ 15) : 0.0;
+    // TODO: test comparive score on length - length should be the estimated mean of words in a single sentence
+    var normalized = tallied != 0 ? tallied / math.sqrt(tallied * tallied + 15) : 0.0; 
 
     if (normalized > 1.0)
       normalized = 1.0;
     else if (normalized < -1.0)
       normalized = -1.0;
 
-    return Score(indifferent, negative, positive, normalized);
+    // percentages
+    num total = indifferent + negative.abs() + positive;
+    num pIndifferent = indifferent != 0 ? (indifferent / total).abs() : 0;
+    num pNegative = negative != 0 ? (negative / total).abs() : 0;
+    num pPositive = positive != 0 ? (positive / total).abs() : 0;
+
+    return Score(pIndifferent, pNegative, pPositive, normalized);
   }
 }

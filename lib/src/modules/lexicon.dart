@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import '../models/lemma.dart';
 
 export '../models/lemma.dart';
@@ -6,19 +8,46 @@ class Lexicon {
   
   final Set<Lemma> _lemmas;
 
-  Lexicon(this._lemmas);
+  Iterable _conpulatives;
+  Iterable _words;
+
+  Lexicon(this._lemmas) {
+    if (this._lemmas == null || (this._lemmas != null && this._lemmas.length == 0))
+      throw 'The lexicon may not be initialized with empty lemmas';
+    
+    this._conpulatives = _lemmas.where((l) => l.type == LemmaType.CONPULATIVE);
+    this._words = _lemmas.where((l) => l.type == LemmaType.WORD);
+  }
 
   Lemma operator [](final String key) => find(key);
 
-  Lemma find(final String key) 
-    => key != null ? _lemmas?.firstWhere((l) => l.lemma == key.trim().toLowerCase(), orElse: () => null) : null;
+  /// find a specific [Lemma] by its word
+  Lemma find(String key) {
+    if (key == null) 
+      return null;
 
-  Iterable<Lemma> get words => List<Lemma>.unmodifiable(_lemmas).where((l) => l.type == LemmaType.WORD);
+    key = key.toLowerCase().trim();
+    
+    return _lemmas?.firstWhere((l) => l.lemma == key, orElse: () => null);
+  }
 
-  Iterable<Lemma> get conpulatives => List<Lemma>.unmodifiable(_lemmas).where((l) => l.type == LemmaType.CONPULATIVE);
+  Iterable<Lemma> get words => List<Lemma>.unmodifiable(_words);
 
+  Iterable<Lemma> get conpulatives => List<Lemma>.unmodifiable(_conpulatives);
+
+  /// get all lemmas of the lexicon or by [LemmaType]
+  Iterable<Lemma> getAll([LemmaType type = null]) {
+    if (type == LemmaType.WORD)
+      return _words;
+    if (type == LemmaType.CONPULATIVE)
+      return _conpulatives;
+
+    return List<Lemma>.unmodifiable(_lemmas);
+  }
+
+  /// add a new or replace an existing [Lemma]
   void append(final Lemma lemma) {
-    if (_lemmas == null)
+    if (lemma == null)
       return;
 
     Lemma existing = find(lemma.lemma);
@@ -32,5 +61,6 @@ class Lexicon {
       ..add(lemma);
   }
 
+  // add or replace an [Iterable<Lemma>]
   void appendAll(final Iterable<Lemma> lemmas) => lemmas.forEach(append);
 }

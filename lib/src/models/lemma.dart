@@ -8,5 +8,5 @@ class Lemma {
   final num score;
   final LemmaType type;
 
-  Lemma(this.lemma, this.score, this.type);
+  Lemma(String lemma, this.score, this.type): this.lemma = lemma.toLowerCase().trim();
 }
