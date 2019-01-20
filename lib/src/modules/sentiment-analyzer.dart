@@ -57,6 +57,7 @@ class SentimentAnalyzer {
     return _a > _b ? _a : _b;
   }
 
+  /// analyzes the sentiment of a sentence 
   Score analyze(final String input) {
     // individual words of the given input
     final words = _tokenizer.tokenize(input).map((s) => s.toLowerCase()).toList();

@@ -9,6 +9,8 @@ void main() async {
 
   final negator = ENNegator.create();
 
+  final constradictor = ENContradictor();
+
   final incrementingAdverbs = Set.of([
       'absolutely',
       'amazingly',
@@ -48,6 +50,7 @@ void main() async {
       await deserializer.parse(),
       tokenizer,
       negator,
+      constradictor,
       incrementingAdverbs: incrementingAdverbs,
       decrementingAdverbs: decrementingAdverbs
     ), 'I love the beach, but the weather today is awful!')
