@@ -58,9 +58,13 @@ class ENNegator extends Negator {
 
   ENNegator._internal(this._negatedWords);
 
+  @override
+  bool isNegator(final String word) => word != null && _negatedWords.contains(word) || _AUTO_NT_REGEXP.hasMatch(word);
+
+  @override
   bool isNegated(final String input) {
     // check if the sentence contains a negator
-    final negated = input.trim().toLowerCase().split(' ').firstWhere((s) => _negatedWords.contains(s) || _AUTO_NT_REGEXP.hasMatch(s), orElse: () => null);
+    final negated = input.trim().toLowerCase().split(' ').firstWhere(isNegator, orElse: () => null);
 
     return negated != null;
   }

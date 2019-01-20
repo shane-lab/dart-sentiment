@@ -265,7 +265,7 @@ class SentimentAnalyzer {
 
     // trying to find a negator before the current index and all preceding adverbs
     final negatorIndex = index - (i + n + 1);
-    if (negatorIndex >= 0 && _negator.isNegated(words[negatorIndex])) 
+    if (negatorIndex >= 0 && _negator.isNegator(words[negatorIndex])) 
       score *= _NEGATE_SCALAR;
 
     return score;
