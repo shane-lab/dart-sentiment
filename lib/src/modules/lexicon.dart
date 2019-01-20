@@ -62,6 +62,6 @@ class Lexicon {
       ..add(lemma);
   }
 
-  // add or replace an [Iterable<Lemma>]
+  /// add or replace an [Iterable<Lemma>]
   void appendAll(final Iterable<Lemma> lemmas) => lemmas.forEach(append);
 }

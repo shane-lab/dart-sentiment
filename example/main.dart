@@ -2,7 +2,7 @@ library example;
 
 import 'dart:io' as io;
 
-import 'package:dart_sentiment/sentiment.dart' as sentiment;
+import 'package:dart_sentiment/dart_sentiment.dart' as sentiment;
 
 void main(List<String> args) async {
 
@@ -19,15 +19,18 @@ void main(List<String> args) async {
     decrementingAdverbs: Set.of(adverbs[1])
   );
 
-  final score = analyzer.analyze('you\'re fat');
+  final sentence = 'you were never smart';
+
+  final score = analyzer.analyze(sentence);
 
   if (score != null)
     print(
 '''
+\"${sentence}\"
 neu: ${score.indifferent.toStringAsFixed(4)}
 neg: ${score.negative.toStringAsFixed(4)}
 pos: ${score.positive.toStringAsFixed(4)}
-comparative: ${score.value.toStringAsFixed(4)}
+polarity: ${score.polarity.toStringAsFixed(4)}
 '''
     );
 }

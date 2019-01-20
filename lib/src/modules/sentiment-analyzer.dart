@@ -27,6 +27,8 @@ enum _ADVERB_TYPE {
 const _INCREMENT = 0.3;
 const _DECREMENT = -0.3;
 
+const _NEGATE_SCALAR = -0.75;
+
 final _SPECIAL_CHARS_REGEXP = RegExp(r'[!@#$%^&(),.?":\{\}|<>\\\/\[\]_-~\+\*`]', multiLine: true, caseSensitive: false);
 
 class SentimentAnalyzer {
@@ -184,10 +186,10 @@ class SentimentAnalyzer {
     if (lemma == null)
       return 0;
 
-    var score = lemma.score;
+    num amplifier = 0;
 
     // check for possible preceding adverbs
-    int i = 0;
+    int i = 0, n = 0;
     bool flag0 = index > i;
     do {
       final j = index - (i + 1);
@@ -220,14 +222,14 @@ class SentimentAnalyzer {
 
         bool flag1 = true;
 
-        int n = 0;
+        int l = 0;
         do {
-          if ((k - n) < 0) {
+          if ((k - l) < 0) {
             flag1 = false;
             continue;
           }
 
-          precedingWord = words[k - n];
+          precedingWord = words[k - l];
           final conpulative = [[precedingWord], precedingWords].expand((x) => x).join(' ');
 
           adverbCheck = _isAdverb(conpulative);
@@ -245,18 +247,26 @@ class SentimentAnalyzer {
               precedingWord = conpulative;
 
             flag1 = false;
+            n++;
             continue;
           }
 
           precedingWords.add(precedingWord);
-          n++;
+          l++;
         } while (flag1);
       } 
 
-      score += (_amplifier(precedingWord, score) * (1 - (.05 * i)));
+      amplifier += (_amplifier(precedingWord, lemma.score) * (1 - (.05 * i)));
 
       i++;
     } while (flag0);
+
+    var score = lemma.score + amplifier;
+
+    // trying to find a negator before the current index and all preceding adverbs
+    final negatorIndex = index - (i + n + 1);
+    if (negatorIndex >= 0 && _negator.isNegated(words[negatorIndex])) 
+      score *= _NEGATE_SCALAR;
 
     return score;
   }
@@ -279,6 +289,7 @@ class SentimentAnalyzer {
   }
 
   // contradictory
+  
 
   // peculiarities
 

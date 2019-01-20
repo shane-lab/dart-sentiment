@@ -5,6 +5,7 @@ const _NEGATES = const [
   'not',
   'nor',
   'nope',
+  'never',
   'dont',
   'don\'t',
   'doesnt',
@@ -58,7 +59,7 @@ class ENNegator extends Negator {
   ENNegator._internal(this._negatedWords);
 
   bool isNegated(final String input) {
-    // check if the first
+    // check if the sentence contains a negator
     final negated = input.trim().toLowerCase().split(' ').firstWhere((s) => _negatedWords.contains(s) || _AUTO_NT_REGEXP.hasMatch(s), orElse: () => null);
 
     return negated != null;
