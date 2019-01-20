@@ -12,9 +12,11 @@ void main(List<String> args) async {
 
   final negator = sentiment.ENNegator.create();
 
+  final contradictor = sentiment.ENContradictor();
+
   final adverbs = await _adverbs();
 
-  final analyzer = sentiment.SentimentAnalyzer(await deserializer.parse()..append(sentiment.Lemma('good shit', 5, sentiment.LemmaType.CONPULATIVE)), tokenizer, negator, 
+  final analyzer = sentiment.SentimentAnalyzer(await deserializer.parse()..append(sentiment.Lemma('good shit', 5, sentiment.LemmaType.CONPULATIVE)), tokenizer, negator, contradictor, 
     incrementingAdverbs: Set.of(adverbs[0]),
     decrementingAdverbs: Set.of(adverbs[1])
   );

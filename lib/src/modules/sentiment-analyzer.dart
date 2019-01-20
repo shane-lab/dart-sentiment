@@ -39,11 +39,13 @@ class SentimentAnalyzer {
 
   final Negator _negator;
 
+  final Contradictor _contradictor;
+
   Set<String> _incrementingAdverbs;
 
   Set<String> _decrementingAdverbs;
 
-  SentimentAnalyzer(this._lexicon, this._tokenizer, this._negator, {Set<String> incrementingAdverbs, Set<String> decrementingAdverbs}) {
+  SentimentAnalyzer(this._lexicon, this._tokenizer, this._negator, this._contradictor, {Set<String> incrementingAdverbs, Set<String> decrementingAdverbs}) {
     this._incrementingAdverbs = incrementingAdverbs != null ? List<String>.unmodifiable(incrementingAdverbs).toSet() : null;
     this._decrementingAdverbs = decrementingAdverbs != null ? List<String>.unmodifiable(decrementingAdverbs).toSet() : null;
   }
@@ -60,7 +62,7 @@ class SentimentAnalyzer {
     final words = _tokenizer.tokenize(input).map((s) => s.toLowerCase()).toList();
 
     // tallied score of input
-    final scores = List<num>();
+    var scores = List<num>();
 
     final conpulatives = _lexicon.conpulatives;
     
@@ -115,7 +117,7 @@ class SentimentAnalyzer {
         scores.add(0);
     }
 
-    // scores = 
+    scores = _contradictory(input, scores);
 
     return _tally(scores);
   }
@@ -288,11 +290,26 @@ class SentimentAnalyzer {
     return amp;
   }
 
-  // contradictory
-  
+  /// checks for any contradictory in the given sentence, decrements the total score before the contradiction and amplifies hereafter
+  Iterable<num> _contradictory(final String input, Iterable<num> scores) {
+    int indexOf = _contradictor.isContradicted(input);
 
-  // peculiarities
+    if (indexOf >= 0) {
+      int i = 0;
+      scores = scores.map((score) {
+        score *= i < indexOf ? .5 : 1.5;
 
+        i++;
+        return score;
+      }).toList();
+    }
+
+    return scores;
+  }
+
+  // TODO handle peculiarities such as ['the','fucking','shit']
+
+  /// calculates the polarity of between the possitive and the negative scores
   Score _tally(Iterable<num> scores) {
     num indifferent = 0;
     num negative = 0;
