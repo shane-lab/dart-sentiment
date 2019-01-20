@@ -1,6 +1,6 @@
 import 'package:test/test.dart';
 
-import 'package:dart_sentiment/sentiment.dart';
+import 'package:dart_sentiment/dart_sentiment.dart';
 
 void main() {
   Tokenizer tokenizer;

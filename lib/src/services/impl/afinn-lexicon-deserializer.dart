@@ -6,15 +6,13 @@ final _MULTI_WORD_REGEXP = RegExp(r'\s[aA-zZ]', caseSensitive: false);
 final _WHITESPACE_REGEXP = RegExp(r'(\s|\t)+');
 
 class AFINNLexiconDeserializer extends LexiconDeserializer { 
-  String absolutePath;
+  final String absolutePath;
 
   factory AFINNLexiconDeserializer.asAFINN_165_EN() => AFINNLexiconDeserializer._internal('afinn-165-en');
   
   factory AFINNLexiconDeserializer.withCustomFile(final String absolutePath) => AFINNLexiconDeserializer._internal(absolutePath, false);
 
-  AFINNLexiconDeserializer._internal(final String path, [bool isRelative = true]) {
-    absolutePath = isRelative ? '${io.Directory.current.path}/lexicons/afinn/${path}.txt' : path;
-  }
+  AFINNLexiconDeserializer._internal(final String path, [bool isRelative = true]): absolutePath = isRelative ? '${io.Directory.current.path}/lexicons/afinn/${path}.txt' : path;
 
   @override
   Future<Lexicon> parse() async {

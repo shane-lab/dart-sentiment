@@ -42,8 +42,8 @@ class SentimentAnalyzer {
   Set<String> _decrementingAdverbs;
 
   SentimentAnalyzer(this._lexicon, this._tokenizer, this._negator, {Set<String> incrementingAdverbs, Set<String> decrementingAdverbs}) {
-    this._incrementingAdverbs = List<String>.unmodifiable(incrementingAdverbs).toSet();
-    this._decrementingAdverbs = List<String>.unmodifiable(decrementingAdverbs).toSet();
+    this._incrementingAdverbs = incrementingAdverbs != null ? List<String>.unmodifiable(incrementingAdverbs).toSet() : null;
+    this._decrementingAdverbs = decrementingAdverbs != null ? List<String>.unmodifiable(decrementingAdverbs).toSet() : null;
   }
 
   int get _maxAdverbs {
@@ -66,7 +66,7 @@ class SentimentAnalyzer {
     String conpulative;
     int skipped = 0;
 
-    var remainingInput = input.trim().toLowerCase();
+    var remainingInput = words.join(' ').trim().toLowerCase();
     for (var i = 0; i < words.length; i++) {
       var word = words[i];
       
@@ -135,11 +135,9 @@ class SentimentAnalyzer {
     if (word != null && words != null && words.length - 1 > index) {
       var nextWord = words[index + 1];
       if (_checkAdverbType(word) != _ADVERB_TYPE.NONE) {
-        // print(words[])
         bool isAdverb = _checkAdverbType(nextWord) != _ADVERB_TYPE.NONE;
-        if (!isAdverb) {
+        if (!isAdverb)
           return _lexicon.find(nextWord) != null;
-        }
 
         return true;
       }
@@ -181,7 +179,7 @@ class SentimentAnalyzer {
     return [flag, isPartial];
   }
 
-  /// checks and returns the score of word
+  /// checks and returns the score of word, amplified by the preceding adverbs
   num _validity(final Lemma lemma, final List<String> words, int index) {
     if (lemma == null)
       return 0;
@@ -255,7 +253,7 @@ class SentimentAnalyzer {
         } while (flag1);
       } 
 
-      score += (_amplifyLemmaScore(precedingWord, score) * (1 - (.05 * i)));
+      score += (_amplifier(precedingWord, score) * (1 - (.05 * i)));
 
       i++;
     } while (flag0);
@@ -263,8 +261,8 @@ class SentimentAnalyzer {
     return score;
   }
 
-  /// increases or decreases the lemma based on the given adverb
-  num _amplifyLemmaScore(final String word, num score, [String conpulative]) {
+  /// returns the adverb (increase or decrease) amplifier based on the score of the corresponding lemma
+  num _amplifier(final String word, num score) {
     num amp = 0.0;
 
     _ADVERB_TYPE type = _checkAdverbType(word);

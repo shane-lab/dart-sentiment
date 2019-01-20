@@ -1,5 +1,7 @@
 library example;
 
+import 'dart:io' as io;
+
 import 'package:dart_sentiment/sentiment.dart' as sentiment;
 
 void main(List<String> args) async {
@@ -10,44 +12,14 @@ void main(List<String> args) async {
 
   final negator = sentiment.ENNegator.create();
 
+  final adverbs = await _adverbs();
+
   final analyzer = sentiment.SentimentAnalyzer(await deserializer.parse()..append(sentiment.Lemma('good shit', 5, sentiment.LemmaType.CONPULATIVE)), tokenizer, negator, 
-    incrementingAdverbs: Set.of([
-      'absolutely',
-      'amazingly',
-      'completely',
-      'considerably',
-      'extremely',
-      'fully',
-      'fucking',
-      'greatly',
-      'incredibly',
-      'really',
-      'remarkably',
-      'tremendously',
-      'unbelievably',
-      'utterly',
-      'very'
-    ]),
-    decrementingAdverbs: Set.of([
-      'almost',
-      'barely',
-      'hardly',
-      'kind of',
-      'kinda',
-      'kindof',
-      'partly',
-      'pretty',
-      'quite',
-      'somewhat',
-      'some what',
-      'sort of',
-      'sorta',
-      'sortof',
-      'slightly'
-    ])
+    incrementingAdverbs: Set.of(adverbs[0]),
+    decrementingAdverbs: Set.of(adverbs[1])
   );
 
-  final score = analyzer.analyze('fucking love');
+  final score = analyzer.analyze('you\'re fat');
 
   if (score != null)
     print(
@@ -58,4 +30,39 @@ pos: ${score.positive.toStringAsFixed(4)}
 comparative: ${score.value.toStringAsFixed(4)}
 '''
     );
+}
+
+/// read in the adverbs from a local file
+Future<List<Iterable<String>>> _adverbs() async {
+  final incrementing = Set<String>();
+  final decrementing = Set<String>();
+
+  final regexp = RegExp(r'^(INC|DEC)(\s\w+)+$', caseSensitive: true);
+
+  // format: [INC|DEC][white space][adverb]
+  try {
+    final file = io.File('${io.Directory.current.path}/example/adverbs.txt');
+
+    final lines = await file.readAsLines();
+
+    for (var line in lines) {
+      line = line.trim();
+
+      final matches = regexp.allMatches(line);
+      if (matches.length <= 0) 
+        continue;
+
+      final splitted = line.split(' ');
+      final key = splitted.removeAt(0);
+      if (splitted.length >= 1) {
+        final adverb = splitted.reduce((a, b) => '${a} ${b ?? ''}').trim();
+        if (key == 'INC')
+          incrementing.add(adverb);
+        else
+          decrementing.add(adverb);
+      }
+    }
+  } catch(ex) { }
+
+  return [incrementing, decrementing];
 }

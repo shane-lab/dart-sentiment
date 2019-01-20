@@ -37,12 +37,13 @@ class Lexicon {
 
   /// get all lemmas of the lexicon or by [LemmaType]
   Iterable<Lemma> getAll([LemmaType type = null]) {
+    Iterable lemmas = _lemmas;
     if (type == LemmaType.WORD)
-      return _words;
+      lemmas = _words;
     if (type == LemmaType.CONPULATIVE)
-      return _conpulatives;
+      lemmas = _conpulatives;
 
-    return List<Lemma>.unmodifiable(_lemmas);
+    return List<Lemma>.unmodifiable(lemmas);
   }
 
   /// add a new or replace an existing [Lemma]

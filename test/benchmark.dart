@@ -1,6 +1,6 @@
 import 'package:benchmark_harness/benchmark_harness.dart';
 
-import 'package:dart_sentiment/sentiment.dart';
+import 'package:dart_sentiment/dart_sentiment.dart';
 
 void main() async {
   final deserializer = AFINNLexiconDeserializer.asAFINN_165_EN();
@@ -59,11 +59,8 @@ class _SentimentAnalyzerBenchmark extends BenchmarkBase {
   final String _sentence;
   _SentimentAnalyzerBenchmark(this._analyzer, this._sentence) : super('Sentiment Analyzer');
 
+  @override
   void run() => _analyzer.analyze(_sentence);
-
-  // void run() {
-  //   1+1;
-  // }
 
   @override
   void report() {

@@ -1,0 +1,30 @@
+INC absolutely
+INC amazingly
+INC completely
+INC considerably
+INC extremely
+INC fully
+INC fucking
+INC greatly
+INC incredibly
+INC really
+INC remarkably
+INC tremendously
+INC unbelievably
+INC utterly
+INC very
+DEC almost
+DEC barely
+DEC hardly
+DEC kind of
+DEC kinda
+DEC kindof
+DEC partly
+DEC pretty
+DEC quite
+DEC somewhat
+DEC some what
+DEC sort of
+DEC sorta
+DEC sortof
+DEC slightly
