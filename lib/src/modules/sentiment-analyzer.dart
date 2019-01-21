@@ -38,7 +38,7 @@ class SentimentAnalyzer {
   SentimentAnalyzer(this._lexicon, this._tokenizer, this._negator, this._contradictor, {Set<String> incrementingAdverbs, Set<String> decrementingAdverbs, Set<String> stopWords}):
     this._incrementingAdverbs = _immutableCollection(incrementingAdverbs)?.toSet(),
     this._decrementingAdverbs = _immutableCollection(decrementingAdverbs)?.toSet(),
-    this._stopWords = _immutableCollection<String>(stopWords)?.toSet();
+    this._stopWords = _immutableCollection(stopWords)?.toSet();
 
   SentimentAnalyzer setStopWords(Iterable<String> words) => this.._stopWords = _immutableCollection(words)?.toSet();
 
@@ -284,7 +284,6 @@ class SentimentAnalyzer {
 
     _ADVERB_TYPE type = _checkAdverbType(word);
     if (type != _ADVERB_TYPE.NONE) {
-      print('adverb: \'${word}\', type: ${type}');
       amp = type == _ADVERB_TYPE.INCREMENTAL ? _INCREMENT : _DECREMENT;
       if (score < 0)
         amp *= -1;
