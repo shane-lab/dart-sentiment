@@ -16,12 +16,15 @@ void main(List<String> args) async {
 
   final adverbs = await _adverbs();
 
+  final stopWords = await _stopwords();
+
   final analyzer = sentiment.SentimentAnalyzer(await deserializer.parse()..append(sentiment.Lemma('good shit', 5, sentiment.LemmaType.CONPULATIVE)), tokenizer, negator, contradictor, 
     incrementingAdverbs: Set.of(adverbs[0]),
-    decrementingAdverbs: Set.of(adverbs[1])
+    decrementingAdverbs: Set.of(adverbs[1]),
+    stopWords: Set.of(stopWords)
   );
 
-  final sentence = 'you were never smart';
+  final sentence = 'I love the beach, but the weather today is awful!';
 
   final score = analyzer.analyze(sentence);
 
@@ -70,4 +73,14 @@ Future<List<Iterable<String>>> _adverbs() async {
   } catch(ex) { }
 
   return [incrementing, decrementing];
+}
+
+Future<Iterable<String>> _stopwords() async {
+  try {
+    final file = io.File('${io.Directory.current.path}/example/stopwords.txt');
+
+    return await file.readAsLines()..removeWhere((s) => s.isEmpty);
+  } catch(ex) { }
+
+  return null;
 }

@@ -4,32 +4,20 @@ import '../models/index.dart';
 
 import '../services/index.dart';
 
-const _PUNCTUATIONS = const [
-  '.',
-  ',',
-  '`',
-  '\'',
-  '"'
-  '?',
-  '!',
-  ';',
-  ':',
-  '-',
-  '_'
-];
-
 enum _ADVERB_TYPE {
   INCREMENTAL,
   DECREMENTAL,
   NONE
 }
 
+/// percentage increase by positive adverb
 const _INCREMENT = 0.3;
+/// percentage descrease by negative adverb
 const _DECREMENT = -0.3;
-
+/// percentage descrease by negation (negative negate = positive)
 const _NEGATE_SCALAR = -0.75;
 
-final _SPECIAL_CHARS_REGEXP = RegExp(r'[!@#$%^&(),.?":\{\}|<>\\\/\[\]_-~\+\*`]', multiLine: true, caseSensitive: false);
+Iterable<T> _immutableCollection<T>(Iterable<T> collection) => collection != null ? List<T>.unmodifiable(collection).toSet() : null;
 
 class SentimentAnalyzer {
 
@@ -45,22 +33,39 @@ class SentimentAnalyzer {
 
   Set<String> _decrementingAdverbs;
 
-  SentimentAnalyzer(this._lexicon, this._tokenizer, this._negator, this._contradictor, {Set<String> incrementingAdverbs, Set<String> decrementingAdverbs}) {
-    this._incrementingAdverbs = incrementingAdverbs != null ? List<String>.unmodifiable(incrementingAdverbs).toSet() : null;
-    this._decrementingAdverbs = decrementingAdverbs != null ? List<String>.unmodifiable(decrementingAdverbs).toSet() : null;
-  }
+  Set<String> _stopWords;
 
-  int get _maxAdverbs {
-    int _a = _incrementingAdverbs?.reduce((a, b) => a.split(' ').length > b.split(' ').length ? a : b)?.split(' ')?.length ?? 0;
-    int _b = _decrementingAdverbs?.reduce((a, b) => a.split(' ').length > b.split(' ').length ? a : b)?.split(' ')?.length ?? 0;
+  SentimentAnalyzer(this._lexicon, this._tokenizer, this._negator, this._contradictor, {Set<String> incrementingAdverbs, Set<String> decrementingAdverbs, Set<String> stopWords}):
+    this._incrementingAdverbs = _immutableCollection(incrementingAdverbs)?.toSet(),
+    this._decrementingAdverbs = _immutableCollection(decrementingAdverbs)?.toSet(),
+    this._stopWords = _immutableCollection<String>(stopWords)?.toSet();
 
-    return _a > _b ? _a : _b;
-  }
+  SentimentAnalyzer setStopWords(Iterable<String> words) => this.._stopWords = _immutableCollection(words)?.toSet();
+
+  SentimentAnalyzer setIncrementingAdverbs(Iterable<String> words) => this.._incrementingAdverbs = _immutableCollection(words)?.toSet();
+
+  SentimentAnalyzer setDecrementingAdverbs(Iterable<String> words) => this.._decrementingAdverbs = _immutableCollection(words)?.toSet();
 
   /// analyzes the sentiment of a sentence 
   Score analyze(final String input) {
     // individual words of the given input
     final words = _tokenizer.tokenize(input).map((s) => s.toLowerCase()).toList();
+
+    // remove stop words from the tokens
+    if (_stopWords != null && _stopWords.length > 0)
+      words.removeWhere((s) {
+        bool flag = false;
+        
+        // check if tokens are stop words
+        if (flag = _stopWords.contains(s)) {
+          final x = _isAdverb(s);
+          // don't remove if the word is part of an adverb or when the word is classified as a negator or contradiction
+          if (x[0] || x[1] || _negator.isNegator(s) || _contradictor.isContradictor(s)) 
+            flag = false;
+        }
+
+        return flag;
+      });
 
     // tallied score of input
     var scores = List<num>();
@@ -71,7 +76,9 @@ class SentimentAnalyzer {
     String conpulative;
     int skipped = 0;
 
-    var remainingInput = words.join(' ').trim().toLowerCase();
+    final sentence = words.join(' ').trim().toLowerCase();
+
+    var remainingInput = sentence;
     for (var i = 0; i < words.length; i++) {
       var word = words[i];
       
@@ -86,9 +93,6 @@ class SentimentAnalyzer {
               continue;
             }
           }
-
-          if (conpulative != null)
-            print('found conpulative lemma: \'${conpulative}\'');
         }
 
         skipped = 0;
@@ -118,7 +122,7 @@ class SentimentAnalyzer {
         scores.add(0);
     }
 
-    scores = _contradictory(input, scores);
+    scores = _contradictory(sentence, scores);
 
     return _tally(scores);
   }
@@ -151,7 +155,7 @@ class SentimentAnalyzer {
     return false;
   }
 
-  /// checks if the given word is (part of) an adverb
+  /// checks if the given word is (part of) an adverb, returns a tuple<bool,bool> [isAdverb, isPartial]
   List<bool> _isAdverb(final String word) {
     if (word == null)
       return [false, false];
@@ -293,12 +297,12 @@ class SentimentAnalyzer {
 
   /// checks for any contradictory in the given sentence, decrements the total score before the contradiction and amplifies hereafter
   Iterable<num> _contradictory(final String input, Iterable<num> scores) {
-    int indexOf = _contradictor.isContradicted(input);
+    int indexOf = _contradictor.contradictedAt(input);
 
     if (indexOf >= 0) {
       int i = 0;
       scores = scores.map((score) {
-        score *= i < indexOf ? .5 : 1.5;
+        score *= i < indexOf ? .7 : 1.3;
 
         i++;
         return score;
@@ -308,7 +312,7 @@ class SentimentAnalyzer {
     return scores;
   }
 
-  // TODO handle peculiarities such as ['the','fucking','shit']
+  // TODO handle peculiarities such as ['the','shit'] <=> ['the','fucking','shit']
 
   /// calculates the polarity of between the possitive and the negative scores
   Score _tally(Iterable<num> scores) {
@@ -328,6 +332,7 @@ class SentimentAnalyzer {
     }
 
     // TODO: test comparive score on length - length should be the estimated mean of words in a single sentence
+    // source: https://jgwritingtips.wordpress.com/2010/02/17/how-long-should-a-sentence-be/
     var normalized = tallied != 0 ? tallied / math.sqrt(tallied * tallied + 15) : 0.0; 
 
     if (normalized > 1.0)

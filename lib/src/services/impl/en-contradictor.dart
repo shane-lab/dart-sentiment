@@ -7,5 +7,5 @@ class ENContradictor extends Contradictor {
   bool isContradictor(final String word) => word != null && word == 'but';
 
   @override
-  int isContradicted(final String input) => input.trim().toLowerCase().split(' ').indexOf('but');
+  int contradictedAt(final String input) => input.trim().toLowerCase().split(' ').indexOf('but');
 }
